@@ -1,0 +1,18 @@
+{application, erlang_chat,
+ [{description, "An OTP application"},
+  {vsn, "0.1.0"},
+  {registered, []},
+  {mod, { erlang_chat_app, []}},
+  {applications,
+   [kernel,
+    stdlib,
+    cowboy,
+    cowlib
+   ]},
+  {env,[]},
+  {modules, []},
+
+  {maintainers, []},
+  {licenses, ["MIT"]},
+  {links, []}
+ ]}.
