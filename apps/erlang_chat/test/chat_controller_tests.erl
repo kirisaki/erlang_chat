@@ -1,7 +1,12 @@
 -module(chat_controller_tests).
 -include_lib("eunit/include/eunit.hrl").
 
-splitN_test_() ->
+chat_controller_test_()->
+    [ splitN()
+    , decode_statement()
+    ].
+
+splitN() ->
     [
      ?_assertEqual([<<"a">>, <<"b c">>], chat_controller:splitN(<<"a b c">>, <<" ">>, 1)),
      ?_assertEqual([<<"a">>, <<"b">>, <<"c">>], chat_controller:splitN(<<"a b c">>,<<" ">>, 2)),
@@ -12,22 +17,22 @@ splitN_test_() ->
      ?_assertEqual([], chat_controller:splitN(<<"">>, <<" ">>, 1))
     ].
 
-encode_statement_test_() ->
-    [
+decode_statement() ->
+     {"blah",[
      ?_assertEqual(
-        {ok, {login, <<"user">>, <<"pass">>}},
-        chat_controller:encode_statement(<<"login/2 user pass">>)),
+        {ok, {<<"login">>, <<"user">>, <<"pass">>}},
+        chat_controller:decode_statement(<<"login/2 user pass">>)),
      ?_assertEqual(
-        {ok, {ping}}, 
-        chat_controller:encode_statement(<<"ping/0">>)),
-     ?_assertEqual(
-        {error}, 
-        chat_controller:encode_statement(<<"say/2 boo">>)),
+        {ok, {<<"ping">>}}, 
+        chat_controller:decode_statement(<<"ping/0">>)),
      ?_assertEqual(
         {error}, 
-        chat_controller:encode_statement(<<"foo bar">>)),
+        chat_controller:decode_statement(<<"say/2 boo">>)),
      ?_assertEqual(
-        {ok, {say, <<"123456">>, <<"nobody expects">>}},
-        chat_controller:encode_statement(<<"say/2 123456 nobody expects">>))
-    ].
+        {error}, 
+        chat_controller:decode_statement(<<"foo bar">>)),
+     ?_assertEqual(
+        {ok, {<<"say">>, <<"123456">>, <<"nobody expects">>}},
+        chat_controller:decode_statement(<<"say/2 123456 nobody expects">>))
+    ]}.
     

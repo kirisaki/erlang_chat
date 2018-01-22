@@ -24,7 +24,7 @@ handle_call({request, Raw}, {From, _Ref}, State) ->
         "4" ->
             {reply, ok, State};
         _ ->
-            case encode_statement(Raw) of
+            case decode_statement(Raw) of
                 {ok, Command} ->
                     {reply, Command, State};
                 _ ->
@@ -47,7 +47,7 @@ code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
 %% inner function
-encode_statement(Binary) ->
+decode_statement(Binary) ->
     [Cmd_|Payload_] = binary:split(Binary, <<" ">>),
     Payload = case Payload_ of
                   [] ->
@@ -61,10 +61,9 @@ encode_statement(Binary) ->
     if
         not (Arity == error) ->
             Arguments = splitN(Payload, <<" ">>, Arity - 1),
-            Num = length(Arguments),
             if
-                Arity == Num ->
-                    {ok, list_to_tuple([list_to_atom(Statement)|Arguments])};
+                Arity == length(Arguments) ->
+                    {ok, list_to_tuple([list_to_binary(Statement)|Arguments])};
                 true ->
                     {error}
             end;
