@@ -61,7 +61,13 @@ encode_statement(Binary) ->
     if
         not (Arity == error) ->
             Arguments = splitN(Payload, <<" ">>, Arity - 1),
-            {ok, list_to_tuple([list_to_atom(Statement)|Arguments])};
+            Num = length(Arguments),
+            if
+                Arity == Num ->
+                    {ok, list_to_tuple([list_to_atom(Statement)|Arguments])};
+                true ->
+                    {error}
+            end;
         true -> 
             {error}
     end.

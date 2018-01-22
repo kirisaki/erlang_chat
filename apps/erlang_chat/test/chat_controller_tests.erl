@@ -22,6 +22,9 @@ encode_statement_test_() ->
         chat_controller:encode_statement(<<"ping/0">>)),
      ?_assertEqual(
         {error}, 
+        chat_controller:encode_statement(<<"say/2 boo">>)),
+     ?_assertEqual(
+        {error}, 
         chat_controller:encode_statement(<<"foo bar">>)),
      ?_assertEqual(
         {ok, {say, <<"123456">>, <<"nobody expects">>}},
