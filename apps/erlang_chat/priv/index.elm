@@ -44,7 +44,7 @@ update msg {input, messages} =
             (Model "" messages, WebSocket.send wsUrl input)
 
         Heartbeat ->
-            (Model "" messages, WebSocket.send wsUrl "4")
+            Model "" messages ! [] -- [WebSocket.send wsUrl "4"]
                 
         NewMessage str ->
             (Model input (str :: messages), Cmd.none)

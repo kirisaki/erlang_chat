@@ -7,14 +7,15 @@
 -export([websocket_handle/2]).
 -export([websocket_info/2]).
 
-init(Req, Opts) ->
-		{cowboy_websocket, Req, Opts}.
+init(Req, State) ->
+		{cowboy_websocket, Req, State
+    , #{idle_timeout => infinity}}.
 
 websocket_init(State) ->
-    {reply, {text, << "connect." >>}, State}.
+    {reply, {text, << "connect." >>}, State, hibernate}.
 
 websocket_handle(_Data, State) ->
-    {ok, State}.
+    {ok, State, hibernate}.
 
 websocket_info(_Info, State) ->
-	{ok, State}.
+    {ok, State, hibernate}.

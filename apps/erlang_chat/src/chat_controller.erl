@@ -1,4 +1,4 @@
--module(erlang_chat_controller).
+-module(chat_controller).
 
 -behaviour(gen_server).
 -export([start_link/0]).
@@ -20,11 +20,16 @@ init([]) ->
     {ok, #state{}}.
 
 handle_call({request, Raw}, {From, _Ref}, State) ->
-    case parse_command(Raw) of
-        {ok, Command} ->
-            {reply, Command, State};
+    case Raw of
+        "4" ->
+            {reply, ok, State};
         _ ->
-            {reply, error, State}
+            case encode_statement(Raw) of
+                {ok, Command} ->
+                    {reply, Command, State};
+                _ ->
+                    {reply, error, State}
+            end
     end;
 handle_call(_Request, _From, State) ->
     {reply, ignored, State}.
@@ -42,28 +47,34 @@ code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
 %% inner function
-parse_command(String) ->
-    [Cmd_|Payload] = string:split(String, " "),
-    Cmd = string:to_lower(Cmd_),
-    Statements =     [ "login/1"
-                     , "group/1"
-                     , "say/2"
-                     ],
-    Exists = lists:any(fun(Elm) -> Cmd == Elm end, Statements),
+encode_statement(Binary) ->
+    [Cmd_|Payload_] = binary:split(Binary, <<" ">>),
+    Payload = case Payload_ of
+                  [] ->
+                      <<>>;
+                  [P] ->
+                      P
+              end,
+    Cmd = string:to_lower(binary_to_list(Cmd_)),
     [Statement|Arity_] = string:split(Cmd, "/"),
     {Arity, _} = string:to_integer(Arity_),
-    %{ok, {Exists, Cmd, Statement, Arity_,Arity}}.
     if
-        Exists and not (Arity == error) ->
-            Arguments = splitN(Payload, " ", Arity),
+        not (Arity == error) ->
+            Arguments = splitN(Payload, <<" ">>, Arity - 1),
             {ok, list_to_tuple([list_to_atom(Statement)|Arguments])};
         true -> 
             {error}
     end.
                            
-
-splitN(_, _, 0)-> 
+splitN(<<>>, _, _)->
     [];
-splitN(String, Separator, N) ->
-    [Head|Tail] = string:split(String, Separator),
-    [Head|splitN(Tail, Separator, N-1)].
+splitN(Binary, _, 0)-> 
+    [Binary];
+splitN(Binary, Separator, N) ->
+    [Head|Tail_] = binary:split(Binary, Separator),
+    case Tail_ of
+        [] -> 
+            [Head];
+        [Tail] ->
+            [Head|splitN(Tail, Separator, N-1)]
+    end.

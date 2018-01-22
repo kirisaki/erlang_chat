@@ -30,7 +30,7 @@ start_link() ->
 init([]) ->
 		Procs =[
             { controller
-            , { erlang_chat_controller
+            , { chat_controller
               , start_link
               , []
               }

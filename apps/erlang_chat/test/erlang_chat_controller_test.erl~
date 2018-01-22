@@ -1,0 +1,5 @@
+-module(erlang_chat_controller_test).
+-include_lib("eunit/include/eunit.hrl").
+
+splitN_test() ->
+    splitN("")

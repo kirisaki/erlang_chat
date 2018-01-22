@@ -1,0 +1,5 @@
+-module(chat_controller_tests).
+-include_lib("eunit/include/eunit.hrl").
+
+splitN_test() ->
+    chat_controller:splitN("a b c", 1)
