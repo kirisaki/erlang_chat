@@ -3,7 +3,7 @@
 %% @end
 %%%-------------------------------------------------------------------
 
--module(erlang_chat_sup).
+-module(chat_thread_sup).
 
 -behaviour(supervisor).
 
@@ -20,7 +20,7 @@
 %%====================================================================
 
 start_link() ->
-    supervisor:start_link({local, erlang_chat}, ?MODULE, []).
+    supervisor:start_link(?MODULE, []).
 
 %%====================================================================
 %% Supervisor callbacks
@@ -28,20 +28,10 @@ start_link() ->
 
 %% Child :: {Id,StartFunc,Restart,Shutdown,Type,Modules}
 init([]) ->
-    Procs =[
-            { controller
-            , { chat_controller
-              , start_link
-              , [self()]
-              }
-            , permanent
-            , 5000
-            , worker
-            , dynamic
-            }
-           ],
-    {ok, { {one_for_all, 5, 3600}, Procs} }.
-
+    {ok, {{simple_one_for_one, 5, 3600},
+          [{thread,
+            {chat_thread, start_link, []},
+            transient, 5000, worker,[chat_thread]}]}}.
 %%====================================================================
 %% Internal functions
 %%====================================================================
