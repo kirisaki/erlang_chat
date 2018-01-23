@@ -27,10 +27,10 @@ start_link() ->
 %%====================================================================
 
 %% Child :: {Id,StartFunc,Restart,Shutdown,Type,Modules}
-init([]) ->
+init(Args) ->
     {ok, {{simple_one_for_one, 5, 3600},
           [{thread,
-            {chat_thread, start_link, []},
+            {chat_thread, start_link, Args},
             transient, 5000, worker,[chat_thread]}]}}.
 %%====================================================================
 %% Internal functions

@@ -18,13 +18,6 @@
           10000,
           supervisor,
           [chat_thread_sup]}).
--define(TH_SPEC,
-        {thread,
-         {chat_thread_sup, start_link, []},
-          transient,
-          10000,
-          worker,
-          [chat_thread_sup]}).
 
 -record(state, {sup, refs}).
 
@@ -42,7 +35,7 @@ handle_call({request, Raw}, {From, _Ref}, State) ->
         _ ->
             case decode_statement(Raw) of
                 {ok, Statement} ->
-                    gen_server:cast(self(), Statement),
+                    gen_server:cast(?MODULE, Statement),
                     {reply, Statement, State};
                 _ ->
                     {reply, error, State}
@@ -51,12 +44,14 @@ handle_call({request, Raw}, {From, _Ref}, State) ->
 handle_call(_Request, _From, State) ->
     {reply, ignored, State}.
 
-handle_cast({<<"make_thread">>, Name}, State) ->
-    Res = supervisor:start_child(State#state.sup,[Name]),
+handle_cast({<<"make_thread">>, Id, Name}, State) ->
+    Res = supervisor:start_child(State#state.sup,[Name, Id]),
     case Res of
         {ok, Pid} ->
-            {noreply, State#state{sup=Pid}};
-        {_, Error} ->
+            Ref = erlang:monitor(process, Pid),
+            {noreply, State#state{refs=gb_sets:add(Ref, State#state.refs)}};
+        Error ->
+            error(Error),
             {noreply, State}
     end;
 handle_cast(_Msg, State) ->
@@ -66,9 +61,8 @@ handle_info({start_thread_supervisor, Sup}, State) ->
     Res = supervisor:start_child(Sup, ?SUP_SPEC),
     case Res of
         {ok, Pid} ->
-            {noreply, #state{ sup = Pid}};
+            {noreply, State#state{sup = Pid}};
         {_, Error} ->
-            io:format(Error),
             {noreply, State}
     end;
 handle_info(_Info, State) ->
