@@ -70,6 +70,19 @@ decode_statement(Binary) ->
         true -> 
             {error}
     end.
+
+encode_statement(Tuples) ->
+    case Tuples of
+        {} ->
+            {error};
+        {<<>>} ->
+            {error};
+        _ ->
+            [Command_|Arguments] = tuple_to_list(Tuples),
+            Arity = integer_to_binary(length(Arguments)),
+            Command = << Command_/binary, "/",  Arity/binary>>,
+            {ok, list_to_binary(lists:join(<<" ">>, [Command|Arguments]))}
+    end.
                            
 splitN(<<>>, _, _)->
     [];
