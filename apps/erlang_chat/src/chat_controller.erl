@@ -11,22 +11,29 @@
          terminate/2,
          code_change/3]).
 
--define(SPEC,
+-define(SUP_SPEC,
         {thread_sup,
          {chat_thread_sup, start_link, []},
           permanent,
           10000,
           supervisor,
           [chat_thread_sup]}).
+-define(TH_SPEC,
+        {thread,
+         {chat_thread_sup, start_link, []},
+          transient,
+          10000,
+          worker,
+          [chat_thread_sup]}).
 
--record(state, {sup}).
+-record(state, {sup, refs}).
 
 start_link(Sup) ->
     gen_server:start_link({local, chat_controller}, ?MODULE, {Sup}, []).
 
 init({Sup}) ->
     self() ! {start_thread_supervisor, Sup},
-    {ok, #state{}}.
+    {ok, #state{refs=gb_sets:empty()}}.
 
 handle_call({request, Raw}, {From, _Ref}, State) ->
     case Raw of
@@ -34,9 +41,9 @@ handle_call({request, Raw}, {From, _Ref}, State) ->
             {reply, ok, State};
         _ ->
             case decode_statement(Raw) of
-                {ok, Command} ->
-                    deligate(Command),
-                    {reply, Command, State};
+                {ok, Statement} ->
+                    gen_server:cast(self(), Statement),
+                    {reply, Statement, State};
                 _ ->
                     {reply, error, State}
             end
@@ -44,11 +51,19 @@ handle_call({request, Raw}, {From, _Ref}, State) ->
 handle_call(_Request, _From, State) ->
     {reply, ignored, State}.
 
+handle_cast({<<"make_thread">>, Name}, State) ->
+    Res = supervisor:start_child(State#state.sup,[Name]),
+    case Res of
+        {ok, Pid} ->
+            {noreply, State#state{sup=Pid}};
+        {_, Error} ->
+            {noreply, State}
+    end;
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
 handle_info({start_thread_supervisor, Sup}, State) ->
-    Res = supervisor:start_child(Sup, ?SPEC),
+    Res = supervisor:start_child(Sup, ?SUP_SPEC),
     case Res of
         {ok, Pid} ->
             {noreply, #state{ sup = Pid}};
@@ -66,9 +81,6 @@ code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
 %% inner function
-deligate(Statement) ->
-    case Statement of
-        {<<"make_thread">>, Name},
         
         
 decode_statement(Binary) ->

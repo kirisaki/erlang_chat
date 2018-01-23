@@ -1,7 +1,7 @@
 -module(chat_thread).
 
 -behaviour(gen_server).
--export([start_link/0]).
+-export([start_link/1]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -11,14 +11,14 @@
          terminate/2,
          code_change/3]).
 
--record(state, {}).
+-record(state, {name}).
 
-start_link() ->
-    io:format("thread start"),
-    gen_server:start_link(?MODULE, []).
+start_link(Name) ->
+    gen_server:start_link(?MODULE, {Name},[]).
 
-init([]) ->
-    {ok, #state{}}.
+init({Name}) ->
+    io:format("thread ~s start", [Name]),
+    {ok, #state{name=Name}}.
 
 handle_call({request, Raw}, {From, _Ref}, State) ->
     {reply, ok, State};
