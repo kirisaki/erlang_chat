@@ -19,37 +19,46 @@
           supervisor,
           [chat_thread_sup]}).
 
--record(state, {sup, refs}).
+-record(state, {sup, threads, users}).
 
 start_link(Sup) ->
     gen_server:start_link({local, chat_controller}, ?MODULE, {Sup}, []).
 
 init({Sup}) ->
     self() ! {start_thread_supervisor, Sup},
-    {ok, #state{refs=gb_sets:empty()}}.
+    {ok, #state{threads=dict:new(), users=dict:new()}}.
 
 handle_call({request, Raw}, {From, _Ref}, State) ->
-    case Raw of
-        "4" ->
-            {reply, ok, State};
+    io:format(Raw),
+    case statement_converter:decode(Raw) of
+        {ok, {<<"connect">>, Name}} ->
+            case dict:is_key(Name, State#state.users) of
+                true ->
+                    {reply,{<<"error">>, <<Name/binary, " is already used.">>} , State};
+                _ ->   
+                    NewState = #state{users=dict:append(Name, From, State#state.users)},
+                    {reply,{<<"welcome">>, Name} , NewState}
+            end;
+        {ok, {<<"quit">>, Name}} ->
+            case dict:is_key(Name, State#state.users) of
+                true ->
+                    NewState = #state{users=dict:erase(Name, State#state.users)},
+                    {reply,{<<"goodbye">>, <<Name/binary>>} , NewState};
+                _ ->   
+                    {reply,{<<"error">>, <<Name/binary, "doesn't exist.">>} , State}
+            end;
         _ ->
-            case statement_converter:decode(Raw) of
-                {ok, Statement} ->
-                    gen_server:cast(?MODULE, Statement),
-                    {reply, Statement, State};
-                _ ->
-                    {reply, error, State}
-            end
+            {reply,{<<"error">>, <<"invalide statement.">>} , State}
     end;
 handle_call(_Request, _From, State) ->
     {reply, ignored, State}.
 
-handle_cast({<<"make_thread">>, Id, Name}, State) ->
+handle_cast({<<"nick">>, Id, Name}, State) ->
     Res = supervisor:start_child(State#state.sup,[Name, Id]),
     case Res of
         {ok, Pid} ->
             Ref = erlang:monitor(process, Pid),
-            {noreply, State#state{refs=gb_sets:add(Ref, State#state.refs)}};
+            {noreply, State};
         Error ->
             error(Error),
             {noreply, State}
