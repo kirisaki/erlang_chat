@@ -47,6 +47,14 @@ handle_call({request, Raw}, {From, _Ref}, State) ->
                 _ ->   
                     {reply,{<<"error">>, <<Name/binary, "doesn't exist.">>} , State}
             end;
+        {ok, {<<"join">>, Name}} ->
+            case dict:is_key(Name, State#state.users) of
+                true ->
+                    NewState = #state{users=dict:erase(Name, State#state.users)},
+                    {reply,{<<"goodbye">>, <<Name/binary>>} , NewState};
+                _ ->   
+                    {reply,{<<"error">>, <<Name/binary, " doesn't exist.">>} , State}
+            end;
         _ ->
             {reply,{<<"error">>, <<"invalide statement.">>} , State}
     end;
