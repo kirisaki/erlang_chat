@@ -20,40 +20,34 @@
           [chat_thread_sup]}).
 
 -record(state, {sup, threads, users}).
+-record(user, {name, pid}).
 
 start_link(Sup) ->
     gen_server:start_link({local, chat_controller}, ?MODULE, {Sup}, []).
 
 init({Sup}) ->
+    ets:new(users, [set, named_table, {keypos,#user.name}, protected]),
     self() ! {start_thread_supervisor, Sup},
-    {ok, #state{threads=dict:new(), users=dict:new()}}.
+    {ok, #state{threads=dict:new()}}.
 
 handle_call({request, Raw}, {From, _Ref}, State) ->
     io:format(Raw),
     case statement_converter:decode(Raw) of
         {ok, {<<"connect">>, Name}} ->
-            case dict:is_key(Name, State#state.users) of
+            case ets:member(users, Name) of
                 true ->
                     {reply,{<<"error">>, <<Name/binary, " is already used.">>} , State};
                 _ ->   
-                    NewState = #state{users=dict:append(Name, From, State#state.users)},
-                    {reply,{<<"welcome">>, Name} , NewState}
+                    ets:insert(users, #user{name=Name, pid=From}),
+                    {reply,{<<"welcome">>, Name} , State}
             end;
         {ok, {<<"quit">>, Name}} ->
-            case dict:is_key(Name, State#state.users) of
+            case ets:member(users, Name) of
                 true ->
-                    NewState = #state{users=dict:erase(Name, State#state.users)},
-                    {reply,{<<"goodbye">>, <<Name/binary>>} , NewState};
+                    ets:delete(users, Name),
+                    {reply,{<<"goodbye">>, <<Name/binary>>} , State};
                 _ ->   
                     {reply,{<<"error">>, <<Name/binary, "doesn't exist.">>} , State}
-            end;
-        {ok, {<<"join">>, Name}} ->
-            case dict:is_key(Name, State#state.users) of
-                true ->
-                    NewState = #state{users=dict:erase(Name, State#state.users)},
-                    {reply,{<<"goodbye">>, <<Name/binary>>} , NewState};
-                _ ->   
-                    {reply,{<<"error">>, <<Name/binary, " doesn't exist.">>} , State}
             end;
         _ ->
             {reply,{<<"error">>, <<"invalide statement.">>} , State}
