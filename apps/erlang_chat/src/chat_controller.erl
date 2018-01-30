@@ -47,7 +47,9 @@ handle_call({make_thread, Name}, _From, State) ->
                     {reply, {error, Error}, State}
             end
     end;
-
+handle_call({threads}, _From, State) ->
+    Threads = ets:select(threads,[{ #thread{name='$1', _ = '_'}, [], ['$1']}]),
+    {reply, {ok, Threads}, State};
 handle_call(_Request, _From, State) ->
     {reply, ignored, State}.
 

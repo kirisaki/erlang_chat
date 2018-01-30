@@ -8,7 +8,7 @@
 -export([websocket_info/2]).
 
 -record(state, {thread_sup}).
--record(user, {name, pid, threads}).
+-record(user, {name, pid}).
 -record(thread, {name, pid, ref}).
 
 init(Req0, State) ->
@@ -51,7 +51,7 @@ handle_request(Raw, State) ->
                         true ->
                             {reply,{<<"error">>, <<Name/binary, " is already used.">>} , State};
                         _ ->   
-                            ets:insert(users, #user{name=Name, pid=From, threads=[]}),
+                            ets:insert(users, #user{name=Name, pid=From}),
                             {reply,{<<"welcome">>, Name} , State}
                     end;
                 _ ->
@@ -68,10 +68,14 @@ handle_request(Raw, State) ->
                         _ ->   
                             {reply,{<<"error">>, <<Name/binary, " doesn't exist.">>} , State}
                     end;
+		{ok, {<<"threads">>}} ->
+		    {ok, Threads_} = gen_server:call(chat_controller, {threads}),
+		    Threads = list_to_binary(lists:join(" ", Threads_)),
+		    {reply, {<<"threads">>, <<Threads/binary>>}, State};
                 {ok, {<<"join">>, Name}} ->
                     case ets:member(threads, Name) of
                         true ->
-                            [Thread] = ets:select(threads, [{#thread{name=Name, _='_'}, [], ['$_']}]),
+                            [Thread] = ets:lookup(threads, Name),
                             {reply,{<<"welcome">>, <<"thread ", Thread/binary>>} , State};
                         _ ->   
                             case gen_server:call(chat_controller, {make_thread, Name}) of

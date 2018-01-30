@@ -11,17 +11,26 @@
          terminate/2,
          code_change/3]).
 
--record(state, {name}).
+-record(state, {name, users}).
+-record(user, {name, pid, threads}).
 
 start_link(Name) ->
     gen_server:start_link(?MODULE, [Name],[]).
 
 init([Name]) ->
     io:format("thread ~s start", [Name]),
-    {ok, #state{name=Name}}.
+    {ok, #state{name=Name, users=dict:new()}}.
 
-handle_call({request, Raw}, {From, _Ref}, State) ->
-    {reply, ok, State};
+handle_call({user_add, User}, _From, State) ->
+    Name = User#user.name,
+    case dict:is_key(Name, State#state.users) of
+	true ->
+	    {reply, {error, already_exists}, State};
+	_ ->
+	    NewState = State#state{users=dict:append(Name, User, State#state.users)},
+	    {reply, {ok, nop}, State}
+    end;
+
 handle_call(_Request, _From, State) ->
     {reply, ignored, State}.
 
